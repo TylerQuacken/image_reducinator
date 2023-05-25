@@ -23,11 +23,11 @@ class Clusterinator:
         self.data_dim = self.data.shape[-1]
 
         # I want this to do max/min over all axes except the last one
-        self.batch_dim_nums = tuple(range(len(data.shape)-1))
+        self.batch_dim_nums = tuple(range(len(self.batch_dims)))
         self.data_max = np.amax(data, axis=self.batch_dim_nums)
         self.data_min = np.amin(data, axis=self.batch_dim_nums)
         self.data_norm = (self.data - self.data_min)/(self.data_max - self.data_min)
-        self.cluster_assigns = np.zeros(self.batch_dims + (self.n_clusters,), dtype=int)
+        self.cluster_assigns = np.zeros(self.batch_dims, dtype=int)
         # Should change to randomly choose two data points instead of choose two random spots
         self.centroids = np.random.rand(self.n_clusters, self.data_dim)
 
@@ -35,7 +35,8 @@ class Clusterinator:
         # self.cluster_deviations = np.array([1,2])
 
 
-        self.error = None
+        self.error = 9999
+        self.prev_error = 999999
         self.assign_points_to_clusters()
 
     def perform_k_means(self, max_iter=10, converge_tol=0.01):
@@ -43,14 +44,15 @@ class Clusterinator:
         i = 0
 
         while not(converged) and i < max_iter:
-            
+            print(self.cluster_assigns[:8,0])
             self.plot_data_2d()
 
             self.calculate_centroids()
             self.assign_points_to_clusters()
 
-            if self.error < converge_tol:
-                converged = True
+            if (self.prev_error - self.error) < converge_tol:
+                # converged = True
+                pass
             
             i += 1
 
@@ -77,18 +79,19 @@ class Clusterinator:
 
 
             self.centroids[i] = np.mean(masked_data, axis=self.batch_dim_nums)
-            
-            
         
 
     def assign_points_to_clusters(self):
+        self.prev_error = self.error
+
         norm_expand = np.expand_dims(self.data_norm, -2)
         dist_vecs = self.centroids - norm_expand
         dists = np.linalg.norm(dist_vecs, axis=-1)
         self.error = np.sum(dists**2)
-        print(self.error)
         mahalanobis_dists = dists / self.cluster_deviations
-        self.cluster_assigns = np.argmin(mahalanobis_dists, axis=-1)
+        self.cluster_assigns = np.argmax(mahalanobis_dists, axis=-1)
+
+        # embed()
 
 
     def plot_data_2d(self):
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     data[:, :height//2, :] = (np.random.randn(width, height//2, n_channels) + (10*np.random.rand(n_channels) - 1)) * 128
     data[:, height//2:, :] = (np.random.randn(width, height//2, n_channels) + (10*np.random.rand(n_channels) - 1)) * 128
     # data = np.ones((width, height, n_channels))
-    n_clusters = 2
+    n_clusters = 3
 
     clusterinator = Clusterinator(n_clusters, data)
     clusterinator.perform_k_means()
