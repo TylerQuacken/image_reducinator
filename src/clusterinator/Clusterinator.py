@@ -31,28 +31,27 @@ class Clusterinator:
         # Should change to randomly choose two data points instead of choose two random spots
         self.centroids = np.random.rand(self.n_clusters, self.data_dim)
 
-        self.cluster_deviations = np.ones(n_clusters)
-        # self.cluster_deviations = np.array([1,2])
+        # self.cluster_deviations = np.ones(n_clusters)
+        self.cluster_deviations = np.array([1,2,1.5])
 
 
         self.error = 9999
         self.prev_error = 999999
         self.assign_points_to_clusters()
 
-    def perform_k_means(self, max_iter=10, converge_tol=0.01):
+    def perform_k_means(self, max_iter=100, converge_tol=0.0001):
         converged = False
         i = 0
 
         while not(converged) and i < max_iter:
-            print(self.cluster_assigns[:8,0])
             self.plot_data_2d()
 
             self.calculate_centroids()
             self.assign_points_to_clusters()
 
-            if (self.prev_error - self.error) < converge_tol:
-                # converged = True
-                pass
+            if abs(self.prev_error - self.error) < converge_tol:
+                converged = True
+                # pass
             
             i += 1
 
@@ -75,8 +74,7 @@ class Clusterinator:
             cluster_i_points = self.cluster_assigns == i
             cluster_i_points = np.expand_dims(cluster_i_points, axis=-1)
             cluster_i_points = np.repeat(cluster_i_points, 2, axis=-1)
-            masked_data = np.ma.masked_array(self.data_norm, mask=cluster_i_points)
-
+            masked_data = np.ma.masked_array(self.data_norm, mask=np.logical_not(cluster_i_points))
 
             self.centroids[i] = np.mean(masked_data, axis=self.batch_dim_nums)
         
@@ -88,10 +86,9 @@ class Clusterinator:
         dist_vecs = self.centroids - norm_expand
         dists = np.linalg.norm(dist_vecs, axis=-1)
         self.error = np.sum(dists**2)
+        print(self.error)
         mahalanobis_dists = dists / self.cluster_deviations
-        self.cluster_assigns = np.argmax(mahalanobis_dists, axis=-1)
-
-        # embed()
+        self.cluster_assigns = np.argmin(mahalanobis_dists, axis=-1)
 
 
     def plot_data_2d(self):
@@ -104,7 +101,7 @@ class Clusterinator:
         
         centroids = self.centroids*(self.data_max - self.data_min) + self.data_min
         ax.scatter(centroids[...,0], centroids[...,1])
-        plt.pause(0.3)
+        plt.pause(0.03)
 
 
 if __name__ == "__main__":
@@ -126,3 +123,4 @@ if __name__ == "__main__":
     clusterinator = Clusterinator(n_clusters, data)
     clusterinator.perform_k_means()
     clusterinator.plot_data_2d()
+    plt.show()
